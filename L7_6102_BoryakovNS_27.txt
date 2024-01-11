@@ -1,0 +1,97 @@
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include <math.h>
+#include <iomanip>
+#include <stdio.h>
+#include <iostream>
+using namespace std;
+
+double calcC(double x)
+{
+	return sqrt(1 + pow(log10(x), 2));
+}
+
+double calcASM(double x)
+{
+	double result;
+	const int c1 = 1;
+	_asm
+	{
+		//                                          st(0)      st(1)      st(2)      st(3)     st(4)    
+		finit; //инициализация сопроцессора     
+		fild c1;//                                   1           
+		fldlg2;//									lg(2)		 1          
+		fld x;//									x			lg(2)       1         
+		fyl2x;//									lg(x)        1          
+		fld st;//                                   lg(x)       lg(x)       1     
+		fmulp st(1), st(0);//                      lg(x)^2       1
+		faddp st(1), st(0);//                      lg(x)^2+1
+		fsqrt;//                                sqrt(lg(x)^2+1)
+		fstp result // сохраняем результат функции
+	}
+	return result;
+}
+
+
+int main()
+{
+	try
+	{
+		setlocale(LC_ALL, "RUSSIAN");
+		double n, x, a = 1, b = 2.483, integ = 0, h, xc, integc = 0, count = 1;
+		cout << "Лабораторная работа №7, 27 вариант, Боряков Никита, студент 6102-020302D\n";
+		cout << "Вычислить на промежутке [1 ; 2.483] Интеграл: sqrt(1+lg(x)^2)\n";
+		cout << "Введите n = ";
+		cin >> n;
+		x = a;
+		xc = a;
+		h = ((b - a) / (n));
+		cout << setw(10) << "i" << setw(15) << "x" << setw(25) << "Результат С++" << setw(25) << "Результат ASM" << endl;
+		for (int i = 0; i <= n; i++)
+		{
+			// ASM
+			if (i % 2 == 0 && i != 0 && i != n)
+			{
+				integ += 2 * calcASM(x + i * h);
+			}
+			else
+			{
+				if (i % 2 == 0 && (i == 0 || i == n))
+				{
+					integ += calcASM(x + i * h);
+				}
+				else
+				{
+					integ += 4 * calcASM(x + i * h);
+				}
+			}
+			// c++
+			if (i % 2 == 0 && i != 0 && i != n)
+			{
+				integc += 2 * calcC(xc + i * h);
+			}
+			else
+			{
+				if (i % 2 == 0 && (i == 0 || i == n))
+				{
+					integc += calcC(xc + i * h);
+				}
+				else
+				{
+					integc += 4 * calcC(xc + i * h);
+				}
+			}
+			cout << setw(10) << count << setw(15) << x << setw(25) << integc << setw(25) << integ << endl;
+			count++;
+
+		}
+		cout << "Результат интгрирования asm: " << integ * h / 3 << endl;
+		cout << "Результат интгрирования cpp: " << integc * h / 3 << endl;
+		system("PAUSE");
+		return 0;
+	}
+	catch (invalid_argument& e)
+	{
+		cout << e.what() << endl;
+	}
+}

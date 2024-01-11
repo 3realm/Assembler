@@ -1,0 +1,106 @@
+#include <iostream>
+#include <stdio.h>
+#include <cmath>
+#include <iomanip>
+using namespace std;
+
+double calcC(double x)
+{
+	return  pow(8, x) + pow(sin(8 * x), 4) - pow(log(8 * x), 4) + pow(cos(8 * x), 4);
+}
+double pow_Asm(double a, double b) {
+	double res = 0;
+	const int c1 = 1;
+	__asm {
+		finit//                                st0            st1          st2           st3           st4
+		fld a//                                 a
+		fld b//                                 b              a
+		fxch st(1)//                            a              b
+		fldln2//                               ln(2)           a            b
+		fxch st(1)//                            a             ln(2)         b
+		fyl2x//                                ln(a)           b
+		fmulp st(1), st(0)//                    bln(a)
+		fldl2e//                               log2(e)        bln(a)
+		fmul//                                 bln(a)log2(e)
+		fld st//                             bln(a)log2(e) bln(a)log2(e)
+		frndint//                           [bln(a)log2(e)] bln(a)log2(e)
+		fsub st(1), st//                    [bln(a)log2(e)] {bln(a)log2(e)}
+		fxch st(1)//                        {bln(a)log2(e)} [bln(a)log2(e)]
+		f2xm1//                             2^{bln(a)log2(e)}-1 [bln(a)log2(e)]
+		fld1//                                   1    2^{bln(a)log2(e)}-1 [bln(a)log2(e)]
+		fadd//                            2^{bln(a)log2(e)} [bln(a)log2(e)]
+		fscale//                                a^b
+		fstp st(1)//
+		fstp res//
+	}
+	return res;
+}
+double calcASM(double x) 
+{
+	double result;
+	const int c8 = 8;
+	double pow8 = pow_Asm(8, x);
+
+	_asm
+	{
+		//                                          st(0)      st(1)      st(2)      st(3)         st(4)       st(5)      st(6)        st(7)
+		finit; //инициализация сопроцессора 
+		fld pow8;//                                 8^x 
+		fld x;//                                     x          8^x
+		fild c8;//                                   8          x          8^x
+		fmulp st(1), st(0);//                        8x         8^x
+		fsin;//                                    sin(8x)      8^x
+		fld st;//                                  sin(8x)      sin(8x)    8^x
+		fmul st(1), st(0);//                       sin(8x)     sin(8x)^2   8^x
+		fmul st(1), st(0);//                       sin(8x)     sin(8x)^3   8^x
+		fmulp st(1), st(0);//                      sin(8x)^4    8^x
+		fldln2;//									ln(2)       sin(8x)^4    8^x
+		fld x;//									x			ln(2)       sin(8x)^4    8^x
+		fild c8;//                                  8           x			ln(2)     sin(8x)^4    8^x
+		fmulp st(1), st(0);//                       8x          ln(2)      sin(8x)^4    8^x
+		fyl2x;//									ln(8x)      sin(8x)^4    8^x
+		fld st;//                                  ln(8x)      ln(8x))      sin(8x)^4    8^x
+		fmul st(1), st(0);//                       ln(8x)     ln(8x)^2     sin(8x)^4    8^x
+		fmul st(1), st(0);//                       ln(8x)     ln(8x)^3     sin(8x)^4    8^x
+		fmulp st(1), st(0);//                      ln(8x)^4    sin(8x)^4    8^x      
+		fld x;//                                     x         ln(8x)^4    sin(8x)^4    8^x      
+		fild c8;//                                   8          x          ln(8x)^4    sin(8x)^4    8^x      
+		fmulp st(1), st(0);//                        8x         ln(8x)^4   sin(8x)^4    8^x      
+		fcos;//                                    cos(8x)      ln(8x)^4   sin(8x)^4    8^x      
+		fld st;//                                  cos(8x)      cos(8x)    ln(8x)^4   sin(8x)^4    8^x      
+		fmul st(1), st(0);//                       cos(8x)     cos(8x)^2   ln(8x)^4   sin(8x)^4    8^x      
+		fmul st(1), st(0);//                       cos(8x)     cos(8x)^3   ln(8x)^4   sin(8x)^4    8^x      
+		fmulp st(1), st(0);//                      cos(8x)^4    ln(8x)^4   sin(8x)^4    8^x      
+		fsubp st(1), st(0);//            -cos(8x)^4+ln(8x)^4   sin(8x)^4    8^x      
+		fsubp st(1), st(0);//        cos(8x)^4-ln(8x)^4+sin(8x)^4   8^x 
+		faddp st(1), st(0);//   cos(8x)^4-ln(8x)^4+sin(8x)^4+8^x 
+		fstp result; // сохраняем результат функции
+	}
+	return result;
+}
+int main()
+{
+	try
+	{
+		setlocale(LC_ALL, "RUSSIAN");
+		cout << "Лабораторная работа №6, 27 вариант, Никита Боряков, студент 6102-020302D\n";
+		cout << "Вычислить y = 8^x + (sin(8x))^4 - (ln(8x))^4 + (cos(8x))^4\n";
+		cout << "на промежутке [0.2;2]\n\n";
+		cout << "Введите шаг h = ";
+		double h;
+		cin >> h;
+		double x = 0.2;
+		cout << setw(5) << "x" << setw(15) << "Результат С++" << setw(15) << "Результат ASM" << endl;
+		while (x <= 2)
+		{
+			cout << setw(5) << x << setw(15) << calcC(x) << setw(15) << calcASM(x) << endl;
+			x += h;
+		}
+		system("PAUSE");
+		return 0;
+	}
+	catch (invalid_argument& e)
+	{
+		cout << e.what() << endl;
+	}
+}

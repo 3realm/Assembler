@@ -1,0 +1,77 @@
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include <iomanip>
+#include <stdio.h>
+#include <iostream>
+using namespace std;
+double series_ASM(double x, int n)
+{
+    int status;
+    const int c2 = 2;
+    const int c05 = 1 / 2;
+    const int c0 = 0;
+    int counter = 2;//x^n/(n(n-1))
+    double result; // x(n-2)/n
+    __asm {
+        xor eax, eax
+        xor ebx, ebx
+        xor edx, edx
+        xor ecx, ecx
+        mov ecx, n       // ecx = n
+        finit             //                  
+        fld x             //  x   
+        fld st// x   x
+        fmul st, st(1)// x^2    x
+        fild c2// 2    x^2     x
+        fxch st(1)//x^2   2   x
+        fdiv st, st(1)// x^2/2    2   x
+        calc :
+        fadd st(1), st(0) //  s     sum +s        x     
+            inc counter
+            fmul st(0), st(2)  // s*x   sum + s        x    
+            fild counter       //   k      s*x  sum + s   x 
+            fild c2            //   2      k      s*x  sum + s   x 
+            fsubp st(1), st(0)//k-2     s*x  sum + s   x
+            fild counter//k     k-2      s*x  sum + s   x 
+            fdiv//k-2/k s*x  sum + s   x
+            fmulp st(1), st(0)// s*x*(k-2)/k    sum + s   x
+            cmp ecx, counter;
+        jge calc
+            jl endcalc
+            endcalc :
+        fstp result //сброс с вершины стека текущего члена s
+            fstp result
+    }
+    n = counter;
+    return result - 2;
+}
+double series_CPP(double x, int n)
+{
+    double result = 0;
+    for (int i = 2; i <= n; i++)
+    {
+        result += pow(x, i) / (i * (i - 1));
+    }
+    return result;
+}
+int main()
+{
+    setlocale(LC_ALL, "RUSSIAN");
+    double x;
+    int n;
+    cout << "Лабораторная работа №8 " << endl << " Выполнил: студент группы 6102 - 020302D Боряков Никита"
+        << endl << " Вариант 28 " << endl <<
+        "Вычислить сумму ряда с n-ым членом: x^n/(n(n-1))" << endl;
+    cout << " Введите число членов числового ряда = ";
+    cin >> n;
+    cout << " Введите x = ";
+    cin >> x;
+    cout.precision(18);
+    cout << setw(2) << "n" << setw(20) << "ASM - S(n)" << setw(20) << "C++ - S(n)" << endl;
+    for (int i = 2; i <= n; i++)
+    {
+        cout << setw(2) << i << setw(20) << series_ASM(x, i) << setw(20) << series_CPP(x, i) << setw(20) << series_CPP(x, i) - series_ASM(x, i) << endl;
+    }
+    system("PAUSE");
+    return 0;
+}

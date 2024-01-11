@@ -1,0 +1,93 @@
+using namespace std;
+#include <stdio.h> // стандартный ввод/вывод
+#include <iostream> // потоковый ввод/вывод
+
+double calc_cpp(double a, double b)
+{
+	if (a > b)
+	{
+		return b / a - 5;
+	}
+	else if (a == b)
+	{
+		return 25;
+	}
+	else
+	{
+		return (3 * a - 5) / b;
+	}
+}
+
+double calc_asm(double a, double b)
+{
+	double res; int status; const int c3 = 3; const int c5 = 5; const int c25 = 25;
+	__asm {
+		//st0  st1	st2	st3	st4
+		finit;	инициализация сопроцессора
+		fld 	qword ptr[b];	b
+		fld 	qword ptr[a];	a	b
+		fcom 	st(1); сравниваем a и b
+		fstsw status; сохраняем регистр флагов сопроцессора
+		mov ah, byte ptr[status + 1]
+		sahf; записываем в регистр флагов процессора
+
+		ja a_bigger; переход если a больше
+		jb b_bigger; переход если b больше
+		fild c25;	25	a	b; если равны
+		jmp	endcalc
+
+		a_bigger : ftst; сравнение a с 0
+				   fstsw status; сохраняем регистр флагов сопроцессора
+				   mov ah, byte ptr[status + 1]
+				   sahf; записываем в регистр флагов процессора
+				   je error; переход если a = 0
+				   fdivp st(1), st;	b / a
+				   fild c5;	5  b / a
+				   fsubp st(1), st;	b / a - 5
+				   jmp	endcalc
+
+				   b_bigger : fldz;	0	a	b
+							  fcomp st(2);	сравнение b с 0	a	b
+
+							  fstsw status; сохраняем регистр флагов сопроцессора
+							  mov ah, byte ptr[status + 1]
+							  sahf; записываем в регистр флагов процессора
+							  je error; переход если b = 0
+							  fild c3;3	a	b
+							  fmulp st(1), st;	3 * a	 b
+							  fild c5;	5	3 * a	  b
+							  fsubp st(1), st;	3 * a - 5   b
+							  fld st(1); b   3 * a - 5   b
+							  fdivp st(1), st;	(3 * a - 5) / b
+							  jmp	endcalc
+
+							  error : fldz; формируем результат ошибки
+									  endcalc : fstp 	res;сохранение результата
+	}
+	return res;
+}
+
+
+int main()
+{
+	setlocale(LC_ALL, "RUSSIAN");
+	cout << "Ассемблер. Лабораторная работа № 4. Команды арифметического сопроцессора.\n";
+	cout << "Выполнил: Боряков Н.С., группа 6102-020302D\n";
+	cout << "Вариант 28: \nx=b/a-5, если a>b \nx=25, если a=b\nx=(3*a-5)/b, если a<b\n" << endl;
+	double a, b;
+	cout << "a = ";
+	cin >> a;
+	cout << "b = ";
+	cin >> b;
+	if ((a > b && a != 0) || (a < b && b != 0) || (a == b))
+	{
+		cout << "Ответ на ASM: " << calc_asm(a, b) << endl;
+		cout << "Ответ на C++: " << calc_cpp(a, b) << endl;
+	}
+	else
+	{
+		cout << "Вы ввели некоректные значения!\n";
+	}
+	system("PAUSE");
+	return 0;
+}

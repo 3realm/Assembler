@@ -1,0 +1,82 @@
+// подключаем необходимые библиотеки
+#include <stdio.h> // стандартный ввод/вывод
+#include <iostream> // потоковый ввод/вывод
+using namespace std;
+int calc_cpp(int mas[], int size, int b) {
+	double result = 0;
+	for (int i = 0; i < size; i++) {
+		if (mas[i] > 0 && mas[i] >= b) {
+			result += pow(mas[i], 2);
+		}
+	}
+	return result;
+}
+
+int calc_asm(int mas[], int size_mas, int b)
+{
+	int result = 0;
+	__asm {
+		xor esi, esi //подготовим регистр индекса в массиве 
+		xor edi, edi
+		mov ebx, mas //ebx указывает на начало массива
+		mov ecx, size_mas //счётчик цикла по всем элементам массива
+		jcxz exit_1 //завершить если длина массива 0
+		begin_loop :
+		mov eax, [ebx + esi * 4] //определяем текущий элементz
+			mov edx, b //подготовка сравнения с b
+			cmp eax, edx //сравнение a[i] и b
+			jl end_loop //если меньше, то завершаем цикл
+			mov edx, 0 //подготовка сравнения с b
+			cmp eax, edx //сравнение a[i] и b
+			jl end_loop //если меньше, то завершаем цикл
+			mov edx, eax //подготовка к умножению
+			imul eax, edx
+			add edi, eax
+			end_loop :
+		inc esi //переходим к следующему элементу
+			loop begin_loop //повторяем цикл для всех элементов
+			// массива
+			exit_1 :
+		mov eax, edi //возвращаем количество элементов
+			mov result, eax
+	}
+
+	return result; // возвращаем результат вычисления выражения
+
+}
+
+int main()
+{
+	setlocale(LC_ALL, "RUSSIAN");
+	cout << "Лабораторная работа №3 Вариант №28\nВыполнил студент группы 6102-020302D\nБоряков Никита" << endl;
+	cout << "В одномерном массиве A={a[i]} целых чисел вычислить сумму квадратов всех положительных элементов массива, удовлетворяющих условию: a[i] >= b." << endl;
+	int b, size;
+	cout << "b = ";
+	cin >> b;
+	int* mas;
+	cout << "Введите размер массива" << endl;
+	cin >> size;
+	if (size < 0) {
+		cout << "Размерность массива не может быть отрицательной" << endl;
+	}
+	else {
+		if (size == 0) {
+			cout << "Массив пуст" << endl;
+		}
+		else {
+			mas = new int[size];
+			for (int i = 0; i < size; i++) {
+				cout << "[" << i + 1 << "]" << ": ";
+				cin >> mas[i];
+			}
+			if (calc_asm(mas, size, b) == 0) {
+				cout << "В массиве нет элементов подходящих под условие" << endl;
+			}
+			else {
+				cout << "Резельтат ассемблер " << calc_asm(mas, size, b) << endl << "Результат С++ " << calc_cpp(mas, size, b) << endl;
+			}
+		}
+	}
+	system("PAUSE");
+	return 0;
+}
